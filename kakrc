@@ -14,8 +14,33 @@ plug "h-youhei/kakoune-surround"
 
 plug "occivink/kakoune-filetree"
 
+plug "https://bitbucket.org/KJ_Duncan/kakoune-racket.kak"
+
 require-module luar
 require-module peneira
+
+map global user f ':peneira-files<ret>' -docstring 'File picker'
+map global user p '!wl-paste<ret>' -docstring 'Paste from system clipboard'
+map global user y ':nop %sh{wl-copy $kak_selections 2>/dev/null 1>/dev/null}<ret>' -docstring 'Yank to system clipboard'
+map global user c ':comment-line<ret>' -docstring 'Comment line'
+map global user h ':lsp-hover<ret>' -docstring 'LSP Hover'
+
+set-option global auto_pairs ( ) { } [ ] '"' '"' "'" "'" ` ` “ ” ‘ ’ « » ‹ ›
+enable-auto-pairs
+
+declare-user-mode surround
+map global surround m 'm' -docstring 'goto matching'
+map global surround M 'M' -docstring 'extend to matching'
+map global surround s ':surround<ret>' -docstring 'surround'
+map global surround c ':change-surround<ret>' -docstring 'change'
+map global surround d ':delete-surround<ret>' -docstring 'delete'
+map global surround t ':select-surrounding-tag<ret>' -docstring 'select tag'
+map global normal m ':enter-user-mode surround<ret>' -docstring 'surround mode'
+
+define-command -hidden smart-append %{
+    try %{ exec -draft <a-k>\A\n\z<ret> ; exec A } catch %{ exec a }
+}
+map global normal a ': smart-append<ret>'
 
 # kak-lsp
 eval %sh{kak-lsp}
@@ -58,30 +83,15 @@ face global InfoDiagnosticHint        Information
 face global InfoDiagnosticInformation Information
 face global InfoDiagnosticWarning     Information
 
-
-map global user f ':peneira-files<ret>' -docstring 'File picker'
-map global user p '!wl-paste<ret>' -docstring 'Paste from system clipboard'
-map global user y ':nop %sh{wl-copy $kak_selections 2>/dev/null 1>/dev/null}<ret>' -docstring 'Yank to system clipboard'
-map global user c ':comment-line<ret>' -docstring 'Comment line'
-map global user h ':lsp-hover<ret>' -docstring 'LSP Hover'
-
-set-option global auto_pairs ( ) { } [ ] '"' '"' "'" "'" ` ` “ ” ‘ ’ « » ‹ ›
-enable-auto-pairs
-
-declare-user-mode surround
-map global surround m 'm' -docstring 'goto matching'
-map global surround M 'M' -docstring 'extend to matching'
-map global surround s ':surround<ret>' -docstring 'surround'
-map global surround c ':change-surround<ret>' -docstring 'change'
-map global surround d ':delete-surround<ret>' -docstring 'delete'
-map global surround t ':select-surrounding-tag<ret>' -docstring 'select tag'
-map global normal m ':enter-user-mode surround<ret>' -docstring 'surround mode'
-
-define-command -hidden smart-append %{
-    try %{ exec -draft <a-k>\A\n\z<ret> ; exec A } catch %{ exec a }
+hook global BufCreate .*\.shpl %{
+    set buffer filetype shplait
 }
-map global normal a ': smart-append<ret>'
 
-
-
-
+hook -group lsp-filetype-shplait global BufSetOption filetype=shplait %{
+    set-option buffer lsp_servers %{
+        [racket-language-server]
+        root_globs = ["info.rkt"]
+        command = "racket"
+        args = ["-l", "racket-langserver"]
+    }
+}
